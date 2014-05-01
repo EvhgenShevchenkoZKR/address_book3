@@ -1,0 +1,662 @@
+<?php
+
+/**
+ * @file
+ * This file provides basic hooks imlementations.
+ */
+
+/**
+ * kva
+ * Implements hook_menu().
+ *
+ * @return array
+ */
+function address_book_menu() {
+  //return array(
+
+  $items['address-book/add'] = array(
+    'title' => 'Fill form',
+    'page callback' => 'address_book_form_page',
+//      'page arguments' => array('address_book_form'),
+    'access callback' => 'user_access',
+    'access arguments' => array('visit address_book sample page'),
+    'type' => MENU_LOCAL_TASK,
+  );
+
+  $items['address-book'] = array(
+    'title' => 'Address book',
+    'page callback' => 'address_book_page_address_book', //drupal_get_form
+//      'page arguments' => array('edu_sample_form'),
+    'access callback' => 'user_access',
+    'access arguments' => array('visit address_book sample page'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['address-book/list'] = array(
+    'title' => 'Address book',
+    'page callback' => 'address_book_page_address_book', //drupal_get_form
+//      'page arguments' => array('edu_sample_form'),
+    'access callback' => 'user_access',
+    'access arguments' => array('visit address_book sample page'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+
+  $items['address-book/edit/%'] = array(
+    'title' => 'Edit form',
+    'page callback' => 'address_book_form_page',
+    //'page callback' => 'address_book_edit_form_page',
+    'page arguments' => array(2), //
+    'access callback' => 'user_access',
+    'access arguments' => array('visit address_book sample page'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  $items['address-book/contact/%'] = array(
+    'title' => 'Контакт',
+    'page callback' => 'address_book_contact_page',
+    //'page callback' => 'address_book_edit_form_page',
+    'page arguments' => array(2), //
+    'access callback' => 'user_access',
+    'access arguments' => array('visit address_book sample page'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  $items['address-book/delete/%'] = array(
+    'title' => 'Delete',
+    'page callback' => 'drupal_get_form',
+    //'page callback' => 'address_book_admin_delete_confirm',
+    'page arguments' => array('address_book_delete_confirm', 2),
+    //'access callback' => 'user_access',
+    'access arguments' => array('administer nodes'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+
+/**
+ * Page callback for address-book/delete/%'
+ *
+ */
+function address_book_delete_confirm($form, &$form_state, $id) {
+
+  $form_state['id'] = $id;
+  return confirm_form($form, t('Вы уверены что хотите удалить контакт?', array('%id' => $id)),
+    'address-book');
+}
+
+/**
+ * Page callback for "address_book-sample-form".
+ *
+ * @return array|mixed
+ */
+function address_book_form_page($id=FALSE) {
+  return drupal_get_form('address_book_form', $id);
+}
+
+/**
+ * Page callback for "address_book-contact-page".
+ *
+ * @return array|mixed
+ */
+function address_book_contact_page($id=FALSE) {
+  return drupal_get_form('address_book_contact_form', $id);
+}
+
+/**
+ * Page callback for "address_book_sample_edit_form".
+ *
+ * @return array|mixed
+ */
+function address_book_edit_form_page() {
+  return drupal_get_form('address_book_edit_form');
+}
+
+/**
+ * Page callback for "address_book_sample_form_address_book".
+ *
+ * @return array|mixed
+ */
+function address_book_page_address_book() {
+  return drupal_get_form('address_book_form_address_book');
+}
+
+function address_book_form_address_book($form, &$form_state) {
+  $form = array();
+  drupal_set_breadcrumb(array(
+    l(t('Home'), '<front>'),
+    'Addressbook'
+  ));
+
+  $header = array(
+    t('Full name'),
+    'kartinka' => t('Photo'),
+    //array('data' => t('category'), 'field' => 'category', 'sort' => 'DESC'),
+    'category' => t('category'),
+    'email' => t('email'),
+    'phone' => t('phone'),
+    'birthday' => t('birthday'),
+    t('Actions links'),
+  );
+
+  $rows = array();
+  //filling DB with values
+  global $user;
+  $result_rows = array();
+  if(empty($form_state['values']['category_field']))
+  {
+    $result = db_select('contacts', 'con')->extend('PagerDefault'); //table_name, alias
+    $result->fields('con', array(
+      'contact_id',
+      'first_name',
+      'last_name',
+      'email',
+      'phone',
+      'birthday',
+      'category',
+      'notes',
+      'fid'
+    ));
+    $result->condition('uid', $user->uid, '=');
+    //$result->condition('category', 'друзья', '=');
+    $result->limit(10);
+    $result->range(0, 50);
+    $result = $result
+      ->extend('TableSort')
+      ->orderByHeader($header);
+    $result->orderBy('category', 'asc');
+    $result_rows = $result->execute()->fetchAll();
+  }
+  elseif(!empty($form_state['values']['category_field']))
+  {
+    $form_state['rebuild'] = TRUE;
+    $result = db_select('contacts', 'con')->extend('PagerDefault'); //table_name, alias
+    $result->fields('con', array(
+      'contact_id',
+      'first_name',
+      'last_name',
+      'email',
+      'phone',
+      'birthday',
+      'category',
+      'notes',
+      'fid'
+    ));
+    $result->condition('uid', $user->uid, '=');
+    $result->condition('category', $form_state['values']['category_field'], '=');
+    $result->limit(10);
+    $result->range(0, 50);
+    $result = $result
+      ->extend('TableSort')
+      ->orderByHeader($header);
+    $result->orderBy('category', 'asc');
+    $result_rows = $result->execute()->fetchAll();
+  }
+
+  //$result->condition('category', $form_state['values']['category_field'], '=');
+  foreach ($result_rows as $row) {
+    $file = array(
+      '#theme' => 'image_style',
+      '#style_name' => 'thumbnail',
+      '#path' => file_load($row->fid)->uri,
+    );
+    $rows[$row->contact_id] = array(
+      'kartinka' => array(
+        'data' => $file,
+      ),
+      l(t($row->first_name . " " . $row->last_name),"address-book/contact/{$row->contact_id}", array('id' => 'token=' . drupal_get_token('contact-' . $row->contact_id))),
+      'category' => $row->category,
+      'email' => $row->email,
+      'phone' => $row->phone,
+      'birthday' => $row->birthday,
+      l(t('Edit'), "address-book/edit/{$row->contact_id}", array('id' => 'token=' . drupal_get_token('contact-' . $row->contact_id))) . ' ' . ' | ' .
+      l(t('Delete'), "address-book/delete/{$row->contact_id}", array('id' => 'token=' . drupal_get_token('contact-' . $row->contact_id))),
+    );
+
+  }
+
+  $form['apply'] = array(
+    '#name' => 'apply',
+    '#type' => 'submit',
+    '#value' => t('Apply'),
+    '#weight' => -2,
+
+  );
+
+  $form['category_field'] = array(
+    '#type' => 'select', //change
+    '#title' => t('Category'),
+    '#options' => array('бизнес' => 'бизнес', 'сослуживцы' => 'сослуживцы', 'друзья' => 'друзья', 'семья' => 'семья'),
+    '#weight' => -3,
+  );
+
+  $form['filter'] = array(
+    '#name' => 'filter',
+    '#type' => 'submit',
+    '#value' => t('Filter'),
+    '#weight' => -1,
+    '#submit' => array('address_book_form_address_book',),
+  );
+
+  $form['Create_contact'] = array(
+    '#type' => 'link',
+    '#title' => t('Create new contact'),
+    '#href' => 'address-book/add', // . $node->nid,
+    '#weight' => 0,
+  );
+
+  $form['values'] = array(
+    '#type' => 'tableselect',
+    '#header' => $header,
+    '#options' => $rows,
+    '#js_select' => FALSE,
+  );
+
+  $form['submit'] = array(
+    '#name' => 'submit',
+    '#type' => 'submit',
+    '#value' => t('Delete selected'),
+    //'#submit' => array('address_book_delete_confirm')
+  );
+  $form['pager'] = array(
+    '#markup' => theme('pager')
+  );
+
+  return $form;
+}
+
+
+/**
+ * Form callback for "address_book-sample-form".
+ *
+ * @param $form
+ * @param $form_state
+ * @return array
+ */
+function address_book_form($form, &$form_state, $id = FALSE) {
+  $form = array();
+
+  if ($id) {
+    drupal_set_breadcrumb(
+      array(
+      l(t('Home'), '<front>'),
+      l(t('Addressbook'), 'address-book'),
+      'Edit contact'
+      )
+    );
+
+    $def = array();
+    $result = db_select('contacts', 'con'); //table_name, alias
+    $result->fields('con', array('first_name', 'last_name', 'email', 'phone', 'birthday', 'category', 'notes', 'fid','contact_id'));
+    $result->condition('contact_id', $id, '=');
+    $result->range(0, 1);
+    $result_rows = $result->execute()->fetchAll();
+    foreach ($result_rows as $row) {
+      $def = array(
+        'first_name' => $row->first_name,
+        'last_name' => $row->last_name,
+        'category' => $row->category,
+        'email' => $row->email,
+        'phone' => $row->phone,
+        'birthday' => $row->birthday,
+        'notes' => $row->notes,
+        'fid' => $row->fid,
+        'contact_id' => $row->contact_id,
+      );
+    }
+
+    $form['image'] = array(
+      '#theme' => 'image_style',
+      '#style_name' => 'thumbnail',
+      '#path' => file_load($def['fid'])->uri,
+    );
+
+    $form['file'] = array(
+      '#type' => 'file',
+      '#title' => 'Картинка',
+      '#description' => 'Выберите файл с расширением jpg, jpeg, png или gif',
+      '#default_value' => file_load($def['fid'])->filename,
+    );
+
+    $form['contact_id'] = array(
+      '#type' => 'hidden',
+      '#default_value' => $def['contact_id'],
+      //'#hidden' => TRUE,
+    );
+
+    $form['first_textfield'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Name'),
+      '#default_value' => $def['first_name'],
+    );
+
+    $form['last_name_field'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Surname field'),
+      '#default_value' => $def['last_name'],
+    );
+
+    $form['email_field'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Email'),
+      '#default_value' => $def['email'],
+    );
+
+    $form['phone_field'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Phone'),
+      '#default_value' => $def['phone'],
+    );
+
+        $form['birthday_field'] = array(
+            '#type' => 'date_select',
+            '#title' => t('Birth date'),
+            '#default_value'=>'',
+            '#date_format' => 'd m Y ',
+            '#date_year_range' => '-100:+0',
+            '#date_increment' => '15',
+            '#default_value' => $def['birthday'],
+        );
+
+    $form['category_field'] = array(
+      '#type' => 'select', //change
+      '#title' => t('Category'),
+      '#options' => array('бизнес' => 'бизнес', 'сослуживцы' => 'сослуживцы', 'друзья' => 'друзья', 'семья' => 'семья'),
+      '#default_value' => $def['category'],
+    );
+
+
+    $form['notes_field'] = array(
+      '#type' => 'textarea', //change
+      '#title' => t('Notes'),
+      '#default_value' => $def['notes'],
+    );
+
+
+    $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Send'),
+    );
+  }
+  else {
+    drupal_set_breadcrumb(
+      array(
+        l(t('Home'), '<front>'),
+        l(t('Addressbook'), 'address-book'),
+        'Create contact'
+      )
+    );
+    $form['file'] = array(
+      '#type' => 'file',
+      '#title' => 'Картинка',
+      '#description' => 'Выберите файл с расширением jpg, jpeg, png или gif',
+    );
+
+    $form['first_textfield'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Name'),
+    );
+
+    $form['last_name_field'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Surname field'),
+    );
+
+
+    $form['email_field'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Email'),
+    );
+
+    $form['phone_field'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Phone'),
+    );
+
+        $form['birthday_field'] = array(
+            '#type' => 'date_select',
+            '#title' => t('Birth date'),
+            '#default_value'=>'',
+            '#date_format' => 'd m Y ',
+            '#date_year_range' => '-100:+0',
+            '#date_increment' => '15',
+        );
+
+    $form['category_field'] = array(
+      '#type' => 'select', //change
+      '#title' => t('Category'),
+      '#options' => array('бизнес' => 'бизнес', 'сослуживцы' => 'сослуживцы', 'друзья' => 'друзья', 'семья' => 'семья'),
+    );
+
+
+    $form['notes_field'] = array(
+      '#type' => 'textarea', //change
+      '#title' => t('Notes'),
+    );
+
+
+    $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Send'),
+    );
+  }
+  return $form;
+}
+
+/**
+ * Form for contact
+ * @param $form
+ * @param $form_state
+ * @param bool $id
+ * @return array
+ */
+function address_book_contact_form($form, &$form_state, $id = FALSE) {
+  $form = array();
+  drupal_set_breadcrumb(
+    array(
+      l(t('Home'), '<front>'),
+      l(t('Addressbook'), 'address-book'),
+      'Contact'
+    )
+  );
+    $def = array();
+    $result = db_select('contacts', 'con'); //table_name, alias
+    $result->fields('con', array('first_name', 'last_name', 'email', 'phone', 'birthday', 'category', 'notes', 'fid'));
+    $result->condition('contact_id', $id, '=');
+    $result->range(0, 1);
+    $result_rows = $result->execute()->fetchAll();
+    foreach ($result_rows as $row) {
+      $def = array(
+        'first_name' => $row->first_name,
+        'last_name' => $row->last_name,
+        'category' => $row->category,
+        'email' => $row->email,
+        'phone' => $row->phone,
+        'birthday' => $row->birthday,
+        'notes' => $row->notes,
+        'fid' => $row->fid,
+      );
+    }
+
+  $form['full_name'] = array(
+    '#type' => 'textfield',
+    '#default_value' => $def['first_name']. ' '.$def['last_name'],
+    '#disabled' =>TRUE,
+  );
+
+    $form['image'] = array(
+      '#theme' => 'image_style',
+      '#style_name' => 'thumbnail',
+      '#path' => file_load($def['fid'])->uri,
+    );
+
+  $form['category_field'] = array(
+    '#type' => 'textfield', //change?
+    '#title' => t('Category'),
+    '#options' => array('бизнес' => 'бизнес', 'сослуживцы' => 'сослуживцы', 'друзья' => 'друзья', 'семья' => 'семья'),
+    '#default_value' => $def['category'],
+    '#disabled' =>TRUE,
+  );
+
+    $form['email_field'] = array(
+      '#type' => 'textfield',
+      //'#title_display' => 'after',
+      '#title' => t('Email'),
+      '#default_value' => $def['email'],
+      '#disabled' =>TRUE,
+    );
+
+    $form['phone_field'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Phone'),
+      '#default_value' => $def['phone'],
+      '#disabled' =>TRUE,
+    );
+
+    $form['birthday_field'] = array(
+      '#type' => 'textfield', //change
+      '#title' => t('Birthday'),
+      '#default_value' => $def['birthday'],
+      '#disabled' =>TRUE,
+    );
+
+    $form['notes_field'] = array(
+      '#type' => 'textarea', //change
+      '#title' => t('Notes'),
+      '#default_value' => $def['notes'],
+      '#disabled' =>TRUE,
+    );
+
+  return $form;
+}
+
+/**
+ * Validate callback.
+ *
+ * @param $form
+ * @param $form_state
+ */
+function address_book_form_validate(&$form, &$form_state) {
+  $validators = array(
+    'file_validate_is_image' => array(), // Проверка, действительно ли файл является изображением
+    'file_validate_extensions' => array('png gif jpg jpeg'), // Проверка на расширения
+    'file_validate_size' => array(1 * 1024 * 1024), // Проверка на размер файла (максимум 1mb)
+  );
+  // Загружаем файл в sites/default/files (по умолчанию)
+  if ($file = file_save_upload('file', $validators, 'public://')) {
+    $form_state['values']['file'] = $file; // передаём информацию о файле в ф-ю mymodule_form_submit()
+  }
+  else {
+    form_set_error('file', 'Файл не был загружен');
+  }
+}
+
+function address_book_edit_form_validate(&$form, &$form_state) {
+  $validators = array(
+    'file_validate_is_image' => array(), // Проверка, действительно ли файл является изображением
+    'file_validate_extensions' => array('png gif jpg jpeg'), // Проверка на расширения
+    'file_validate_size' => array(1 * 1024 * 1024), // Проверка на размер файла (максимум 1mb)
+  );
+  // Загружаем файл в sites/default/files (по умолчанию)
+  if ($file = file_save_upload('file', $validators, 'public://')) {
+    $form_state['values']['file'] = $file; // передаём информацию о файле в ф-ю mymodule_form_submit()
+
+  }
+  else {
+    form_set_error('file', 'Файл не был загружен');
+  }
+}
+
+/**
+ *Submit form  to fill address book.
+ *
+ * @param $form
+ * @param $form_state
+ */
+function address_book_form_submit(&$form, &$form_state) {
+  //dsm($form_state);
+  $file = $form_state['values']['file'];
+  $file->status = FILE_STATUS_PERMANENT; // Изменяем статус файла на "Постоянный"
+  file_save($file); // Сохраняем новый статус
+  drupal_set_message('Картинка загружена');
+
+  global $user;
+  if(empty($form_state['values']['contact_id']))
+  {
+    // Insert new row in module table "contacts".
+    db_insert('contacts')
+      ->fields(array(
+        'first_name' => $form_state['values']['first_textfield'],
+        'last_name' => $form_state['values']['last_name_field'],
+        'email' => $form_state['values']['email_field'],
+        'phone' => $form_state['values']['phone_field'],
+        'birthday' => $form_state['values']['birthday_field'],
+        'category' => $form_state['values']['category_field'],
+        'notes' => $form_state['values']['notes_field'],
+        'fid' => $file->fid, // $file объект класса, fid - поле объекта
+        'uid' => $user->uid //добавил со временем, не забыть переустановить БД
+      ))
+      ->execute();
+  }
+  else{
+    {
+      $val=$form_state['values']['contact_id'];
+      db_update('contacts')
+        ->fields(array(
+          'first_name' => $form_state['values']['first_textfield'],
+          'last_name' => $form_state['values']['last_name_field'],
+          'email' => $form_state['values']['email_field'],
+          'phone' => $form_state['values']['phone_field'],
+          'birthday' => $form_state['values']['birthday_field'],
+          'category' => $form_state['values']['category_field'],
+          'notes' => $form_state['values']['notes_field'],
+          'fid' => $file->fid, // $file объект класса, fid - поле объекта
+          'uid' => $user->uid //добавил со временем, не забыть переустановить БД
+        ))
+        ->condition('contact_id', $val)
+        ->execute();
+    }
+
+  }
+}
+
+function address_book_form_address_book_submit(&$form, &$form_state) {
+
+  $val = array();
+
+  switch ($form_state['clicked_button']['#name']) :
+    case 'apply':
+      foreach ($form_state['values']['values'] as $val) {
+        if ($val) {
+          db_update('contacts')
+            ->fields(array('category' => $form_state['input']['category_field']))
+            ->condition('Contact_id', $val)
+            ->execute();
+        }
+      }
+      break;
+    case 'submit':
+      foreach ($form_state['values']['values'] as $val) {
+        if ($val) {
+          //drupal_set_message($val);
+          db_query("DELETE FROM contacts WHERE Contact_id = :cid", array(':cid' => $val));
+        }
+      }
+      break;
+  endswitch;
+
+}
+
+function address_book_delete_confirm_submit($form, &$form_state) {
+  // Проверка подтвердил ли пользователь удаление
+
+  if ($form_state['values']['confirm']) {
+    $id = $form_state['id'];
+    drupal_set_message('Контакт удален');
+    db_query("DELETE FROM contacts WHERE Contact_id = :cid", array(':cid' => $id));
+    $form_state['redirect'] = array('address-book');
+  }
+}
+
+
+
+
