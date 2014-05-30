@@ -4,3 +4,5 @@ description = "Demonstrates basic features of custom modules in Drupal"
 
 core = 7.x
 dependencies [] = date
+dependencies [] = views
+

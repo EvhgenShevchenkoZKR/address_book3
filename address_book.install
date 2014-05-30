@@ -2,84 +2,39 @@
 
 /**
  * @file
- * Install file of module.
+ * Install file of the module.
  */
 
 /**
  * Implements hook_schema().
- *
- * @return array
  */
 function address_book_schema() {
   return array(
-    'contacts' => array(
-      'description' => t('This table stores contact data'),
+    'address_book' => array(
+      'description' => 'Table for contacts Entity`s',
       'fields' => array(
-
-        'contact_id' => array(
-          'description' => 'Primary key',
+        'cid' => array(
+          'description' => 'Contacts ID_s',
           'type' => 'serial',
           'unsigned' => TRUE,
-          'not null' => TRUE
+          'not null' => TRUE,
         ),
-
-          'uid' => array(
-          'description' => 'User ID',
+        'title' => array(
+          'description' => 'Contains label for Recipe',
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+          'default' => '',
+        ),
+        'created' => array(
+          'description' => 'Contains creation date',
           'type' => 'int',
-          'size' => 'medium',
-        ),
-
-        'first_name' => array(
-          'description' => 'Contact name',
-          'type' => 'varchar',
-          'length' => 128,
-        ),
-
-        'last_name' => array(
-          'description' => 'Contact surname',
-          'type' => 'varchar',
-          'length' => 128,
-        ),
-
-        'email' => array(
-          'description' => 'Contact email',
-          'type' => 'varchar',
-          'length' => 128,
-        ),
-
-        'phone' => array(
-          'description' => 'Contact phone',
-          'type' => 'int',
-          'size' => 'medium',
-        ),
-
-         'birthday' => array(
-          'description' => 'Contact birthday',
-          'type' => 'varchar',
-          'mysql_type' => 'datetime',
-        ),
-
-        'category' => array(
-          'description' => 'Contact category',
-          'type' => 'varchar',
-          'length' => 128,
-        ),
-
-        'notes' => array(
-          'description' => 'notes about contact',
-          'type' => 'text',
-          'size' => 'medium',
-        ),
-
-        'fid' => array(
-          'description' => 'Photo id',
-          'type' => 'int',
-          'length' => 10,
           'unsigned' => TRUE,
-          'not null' => TRUE
+          'not null' => TRUE,
+          'default' => 0
         ),
       ),
-      'primary key' => array('contact_id'),
+      'primary key' => array('cid'),
     ),
   );
 }
